@@ -1,26 +1,46 @@
-apiVersion: napptive.com/v1
-kind: Catalog
+apiVersion: core.oam.dev/v1beta1  
+kind: Application
 metadata:
-  name: appwrite-catalog
-  displayName: Appwrite Catalog
+  name: appwrite-app
 spec:
-  description: Catalog for deploying Appwrite server
-  items:
-    - name: appwrite-server
-      displayName: Appwrite Server
-      description: "Appwrite is a self-hosted backend server for web and mobile applications."
-      iconUrl: "https://example.com/appwrite-logo.png"
-      versions:
-        - version: 1.3.1
-          description: "Version 1.3.1 of Appwrite server"
-          containers:
-            - image: appwrite/appwrite:1.3.1
-              name: appwrite-container
-              environment:
-                - name: APPWRITE_API_KEY
-                  value: ""
-                - name: APPWRITE_PROJECT_ID
-                  value: ""
-              ports:
-                - containerPort: 80
-                  protocol: TCP
+  components:
+    - name: appwrite-server  
+      type: webservice
+      properties:
+        image: appwrite/appwrite:1.3.1
+        ports:
+        - port: 80
+          expose: true 
+       
+      traits:
+        - type: napptive-ingress
+          properties:
+            path: /
+    - name: appwrite-db  
+      type: helm
+      properties:
+        chart: stable/postgresql
+        version: 10.3.21
+        values:
+            postgresPassword: examplepassword
+            url: postgresql://postgres:examplepassword@appwrite-db:5432/appwrite
+    - name: appwrite-cache  
+      type: helm
+      properties:
+        chart: stable/redis
+        version: 6.2.4
+        values:
+            port: 6379
+            url: redis://appwrite-cache:6379
+    - name: appwrite-queue
+      type: helm
+      properties:
+        chart: stable/rabbitmq
+        version: 3.9.5
+        url: amqp://appwrite:examplepassword@appwrite-queue:5672
+    - name: appwrite-storage
+      type: helm
+      properties:
+        chart: stable/minio
+        version: RELEASE.2021-09-17T23-35-33Z
+        url: http://appwrite-storage:9000 
